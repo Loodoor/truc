@@ -10,7 +10,7 @@ from . import constants
 
 
 def println(*args, sep=" ", end="\r\n"):
-    if constants.DEBUG_LEVEL == 1:
+    if constants.DEBUG_LEVEL >= 1:
         print(*args, sep=sep, end=end)
 
 

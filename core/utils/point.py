@@ -4,7 +4,7 @@ Code par Folaefolc
 Licence MIT
 """
 
-from . import constants
+from .. import constants
 
 
 class Point:

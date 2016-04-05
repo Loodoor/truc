@@ -12,11 +12,20 @@ import pygame
 class SceneManager:
     def __init__(self, *args):
         self.__availables_scenes = args
+        self.__dynamics = []
         self.__scenes = {
             scene: None for scene in self.__availables_scenes
         }
         self.current = self.__availables_scenes[0]
         self.__historique = []
+
+    def set_as_dynamic(self, scene: str):
+        self.__dynamics.append(scene)
+
+    def is_view_dynamic(self):
+        if self.current in self.__dynamics:
+            return True
+        return False
 
     def load_scenes_view(self):
         for scene in self.__scenes.values():

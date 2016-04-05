@@ -7,7 +7,10 @@ Licence MIT
 from . import view
 from . import scene_manager
 from .. import constants
+from .. import debug
+from . import level
 
+import os
 import pygame
 from pygame.locals import *
 
@@ -19,6 +22,8 @@ class App:
             "menu",
             "game"
         )
+        self.level = level.level.Level()
+        self._blocks_loader = level.blocks.loader.Loader(os.path.join("assets", "blocks"))
 
         # entités
 
@@ -52,11 +57,52 @@ class App:
                 }
             )
         )
-
         self.sc_manager.load_scenes_view()
+        self.sc_manager.set_as_dynamic("game")
+
+        self._blocks_loader.load()
+
+        debug.println("Preparing the game")
+        pygame.key.set_repeat(200, 100)
+        if not os.path.exists("saves/"):
+            os.mkdir("saves/")
+            debug.println("    Creating map")
+            noise = level.level_generator.generator.generate_map(
+                constants.MAP_DEFAULT_LENGTH,
+                constants.MAP_DEFAULT_FLATNESS,
+                constants.MAP_DEFAULT_HEIGHT,
+                constants.MAP_DEFAULT_HEAD_START,
+                constants.MAP_DEFAULT_DENIV
+            )
+            debug.println("    Map created")
+            self.level.add_layer(level.layer.Layer(noise))
+            self.level.add_layer(level.layer.Layer(noise))
+            debug.println("    Layers created and assigned to the level")
+        else:
+            debug.println("A save was found")
+            debug.println("Loading the map")
+            self.level.load("saves/world1")
+            debug.println("Map loaded")
+
+    def save(self):
+        debug.println("Saving world")
+        self.level.save("saves/world1")
+        debug.println("World saved")
+        pygame.quit()
 
     def render(self, dt: float):
-        self.sc_manager.draw_current(self.screen, dt)
+        if not self.sc_manager.is_view_dynamic():
+            self.sc_manager.draw_current(self.screen, dt)
+        else:
+            if self.sc_manager.current == "game":
+                for il, layer in enumerate(self.level.layers[::-1]):
+                    tmp_layer = [line[self.level.fov[0]:self.level.fov[1]] for line in layer.content][self.level.fov[2]:self.level.fov[3]]
+                    for iy, line in enumerate(tmp_layer):
+                        for ix, case in enumerate(line):
+                            self.sc_manager.get_view().add_surf(
+                                image=self._blocks_loader.sprites[case.id],
+                                pos=(ix * constants.TILE_SIZE, iy * constants.TILE_SIZE)
+                            )
 
     def process_event(self, ev: pygame.event):
         # global
@@ -67,6 +113,10 @@ class App:
         if self.sc_manager.current == "menu":
             if ev.type == MOUSEBUTTONUP:
                 self.sc_manager.get_view().move("rouge", pygame.math.Vector2(10, 10))
+            if ev.type == KEYUP:
+                if ev.key == "j":
+                    self.sc_manager.change_current_for("game")
+                    debug.println("Entering play mode")
 
     def run(self):
         self.load()
@@ -80,4 +130,5 @@ class App:
             self.render(dt)
 
             pygame.display.flip()
-        pygame.quit()
+
+        self.save()
